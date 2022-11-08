@@ -34,7 +34,6 @@
 const estim8 = {
 
     stripView : null,
-    constants : null,
     state : null,
 
     initialize: async function () {
@@ -128,7 +127,15 @@ const estim8 = {
             }
 
         }
-    }
+    },
+
+    constants : {
+        version: "2022a",
+        resourceString: 'dataContextChangeNotice\\[estimates\\]',
+        stripHeight: 40,        //  we could (should) calculate this, but for now, OK
+        stripWidth: 300,        //  we could (should) calculate this, but for now, OK
+        turnsPerGame: 5
+    },
 };
 
 /**
@@ -173,16 +180,6 @@ estim8.state = {
     restored: false         //  is this restored from a saved file?
 };
 
-/**
- *
- * @type {{stripWidth: number, resourceString: string, turnsPerGame: number, version: string}}
- */
-estim8.constants = {
-    version: "001",
-    resourceString: 'dataContextChangeNotice\\[estimates\\]',
-    stripWidth: 300,        //  we could (should) calculate this, but for now, OK
-    turnsPerGame: 5
-};
 
 /**
  * This is a view.
@@ -192,7 +189,32 @@ estim8.constants = {
  * @type {{initialize: estimate.stripView.initialize, setPointerVisibility: estimate.stripView.setPointerVisibility, movePointerTo: estim8.stripView.movePointerTo, click: estimate.stripView.click}}
  */
 estim8.stripView = {
+
+    theSVG : null,
+    strip : null,
+    pointer : null,
+
     initialize: function () {
+        try {
+            this.theSVG = d3.select("#estimationStrip")
+                .attr("width", estim8.constants.stripWidth)
+                .attr("height", estim8.constants.stripHeight);
+            this.strip = this.theSVG.append("rect")
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("width", estim8.constants.stripWidth)
+                .attr("height", estim8.constants.stripHeight)
+                .attr("fill", "orange");
+            this.pointer = this.theSVG.append("circle")
+                .attr("cx", 100).attr("cy", estim8.constants.stripHeight/2).attr("r",estim8.constants.stripHeight/4)
+                .attr("fill", "black");
+        } catch (msg) {
+            console.log(`problem initializing d3 : ${msg}`);
+        }
+
+        this.theSVG.on("click", this.click);
+        this.setPointerVisibility(false);
+/*
         this.paper = Snap(document.getElementById("estimationStrip"));    //    create the underlying svg "paper"
         this.paper.node.addEventListener("click", estim8.stripView.click, false);   //  not used initially
 
@@ -201,7 +223,7 @@ estim8.stripView = {
         this.truthCircle = this.paper.circle(50, 20, 10).attr({fill: "lightgray", visibility: "hidden"});
 
         this.pointer = this.paper.circle(100, 20, 10);
-        this.setPointerVisibility(false);
+*/
     },
 
     /**
@@ -209,12 +231,12 @@ estim8.stripView = {
      * @param iVisible  true if it's to be visible
      */
     setPointerVisibility: function (iVisible) {
-        this.pointer.attr({visibility: iVisible ? "visible" : "hidden"});
+        this.pointer.attr("opacity", iVisible ? 1 : 0);
     },
 
     setSelectionVisibility: function (iVisible) {
-        this.truthCircle.attr({visibility: iVisible ? "visible" : "hidden"});
-        this.guessLine.attr({visibility: iVisible ? "visible" : "hidden"});
+        this.truthCircle.attr("opacity", iVisible ? 1 : 0);
+        this.guessLine.attr("opacity", iVisible ? 1 : 0);
     },
 
     /**
@@ -223,14 +245,14 @@ estim8.stripView = {
      */
     movePointerTo: function (iWhere) {
         const tX = iWhere * estim8.constants.stripWidth;    //  convert from decimal to pixels
-        this.pointer.attr({"cx": tX});      //  how you move an object in Snap. "cx" is the x-center of the Circle
+        this.pointer.attr("cx", tX);      //  how you move an object in d3. "cx" is the x-center of the Circle
     },
 
     moveSelectionValues: function (iTruth, iGuess) {
         let tX = iTruth * estim8.constants.stripWidth;    //  convert from decimal to pixels
-        this.truthCircle.attr({"cx": tX});      //  how you move an object in Snap. "cx" is the x-center of the Circle
+        this.truthCircle.attr("cx", tX);      //  how you move an object in d3. "cx" is the x-center of the Circle
         tX = iGuess * estim8.constants.stripWidth;
-        this.guessLine.attr({"x1": tX, "x2": tX});
+        this.guessLine.attr("x1", tX).attr( "x2", tX);  //  x1 and x2 are the x-coordinates of the line...which are the same.
     },
 
     /**
